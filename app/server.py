@@ -120,7 +120,7 @@ def format_docs(docss):
   res = ""
   for docs in docss:
     for doc in docs:
-      res += f'id:{doc.get('metadata').get("_id")} {doc.get('page_content')} {str(doc.get('metadata').get("price"))}VND\n'
+      res += f"id:{doc.get('metadata').get('_id')} {doc.get('page_content')} {str(doc.get('metadata').get('price'))}VND\n"
   return res
 template = """You are an expert PC builder. \
 You will be given computers' parts including Graphics Cards, Processors, hard disks, PSUs, Motherboards, RAMs, CPU coolers. \
