@@ -105,15 +105,16 @@ def convert_objid(docs):
 
 def retriever(search: Search) -> List[Document]:
     docs =[]
-    docs.append(convert_objid(vector_search.similarity_search(search.gpu, k=5, pre_filter = {"category": "gpu"})))
-    docs.append(convert_objid(vector_search.similarity_search(search.cpu, k=5, pre_filter = {"category": "cpu"})))
-    docs.append(convert_objid(vector_search.similarity_search("RAM " + search.RAM + "GB", k=5, pre_filter = {"category": "ram", "ram": search.RAM_type})))
-    docs.append(convert_objid(vector_search.similarity_search("SSD " + search.SSD_size, k=5, pre_filter = {"category": "disk", "sub_category": "ssd"})))
-    docs.append(convert_objid(vector_search.similarity_search("HDD " + search.HDD_size, k=5, pre_filter = {"category": "disk", "sub_category": "hdd"})))
-    docs.append(convert_objid(vector_search.similarity_search("Nguồn " + search.PSU + "W", k=5, pre_filter = {"category": "psu"})))
-    docs.append(convert_objid(vector_search.similarity_search("Mainboard " + size(search.Case), k=5, pre_filter = {"category": "main", "ram": search.RAM_type})))
-    docs.append(convert_objid(vector_search.similarity_search("Vỏ case máy tính " + size(search.Case), k=5, pre_filter = {"category": "case"})))
-    docs.append(convert_objid(vector_search.similarity_search("Tản nhiệt " + cooler(search.Cooler) , k=5, pre_filter = {"category": "cooler", "sub_category": cooler(search.Cooler)})))
+    if search.gpu: docs.append(convert_objid(vector_search.similarity_search(search.gpu, k=5, pre_filter = {"category": "gpu"})))
+    if search.cpu: docs.append(convert_objid(vector_search.similarity_search(search.cpu, k=5, pre_filter = {"category": "cpu"})))
+    if search.RAM: docs.append(convert_objid(vector_search.similarity_search("RAM " + search.RAM + "GB", k=5, pre_filter = {"category": "ram", "ram": search.RAM_type})))
+    if search.SSD_size: docs.append(convert_objid(vector_search.similarity_search("SSD " + search.SSD_size, k=5, pre_filter = {"category": "disk", "sub_category": "ssd"})))
+    if search.HDD_size: docs.append(convert_objid(vector_search.similarity_search("HDD " + search.HDD_size, k=5, pre_filter = {"category": "disk", "sub_category": "hdd"})))
+    if search.PSU: docs.append(convert_objid(vector_search.similarity_search("Nguồn " + search.PSU + "W", k=5, pre_filter = {"category": "psu"})))
+    if search.Case:
+      docs.append(convert_objid(vector_search.similarity_search("Mainboard " + size(search.Case), k=5, pre_filter = {"category": "main", "ram": search.RAM_type})))
+      docs.append(convert_objid(vector_search.similarity_search("Vỏ case máy tính " + size(search.Case), k=5, pre_filter = {"category": "case"})))
+    if search.Cooler: docs.append(convert_objid(vector_search.similarity_search("Tản nhiệt " + cooler(search.Cooler) , k=5, pre_filter = {"category": "cooler", "sub_category": cooler(search.Cooler)})))
     return docs
 
 def format_docs(docss):
