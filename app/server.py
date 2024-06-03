@@ -29,6 +29,7 @@ class Search(BaseModel):
     """Search over a database of computers' parts"""
     gpu: Optional[str] = Field(None, description="Name of your recommended Graphics card")
     cpu: Optional[str] = Field(None, description="Name of your recommended Processor")
+    CPU_socket: Optional[str] = Field(None, description="The CPU Socket of the CPU you recommended")
     RAM: Optional[str] = Field(None, description="Your recommended amount of RAM in Gigabytes")
     RAM_type: Optional[str] = Field(None, description="Your recommended type of RAM in one of the following: DDR3, DDR4, DDR5")
     PSU: Optional[str] = Field(None, description="Your recommended amount of the Power supply wattage")
@@ -90,6 +91,11 @@ def cooler(s):
     if s=="water" or s=="liquid": return "aio"
     return "air"
 
+def socket(s):
+    if "LGA" in s:
+      s = s.replace("LGA ", "")
+    return s
+
 import json
 def convert_objid(docs):
     res = []
@@ -105,15 +111,15 @@ def convert_objid(docs):
 
 def retriever(search: Search) -> List[Document]:
     docs =[]
-    if search.gpu: docs.append(convert_objid(vector_search.similarity_search(search.gpu, k=5, pre_filter = {"category": "gpu"})))
-    if search.cpu: docs.append(convert_objid(vector_search.similarity_search(search.cpu, k=5, pre_filter = {"category": "cpu"})))
-    if search.RAM: docs.append(convert_objid(vector_search.similarity_search("RAM " + search.RAM + "GB", k=5, pre_filter = {"category": "ram", "ram": search.RAM_type})))
-    if search.SSD_size: docs.append(convert_objid(vector_search.similarity_search("SSD " + search.SSD_size, k=5, pre_filter = {"category": "disk", "sub_category": "ssd"})))
-    if search.HDD_size: docs.append(convert_objid(vector_search.similarity_search("HDD " + search.HDD_size, k=5, pre_filter = {"category": "disk", "sub_category": "hdd"})))
-    if search.PSU: docs.append(convert_objid(vector_search.similarity_search("Nguồn " + search.PSU + "W", k=5, pre_filter = {"category": "psu"})))
+    if search.gpu: docs.append(convert_objid(vector_search.similarity_search(search.gpu, k=5, pre_filter = {"category": "gpu", "buildable": True})))
+    if search.cpu: docs.append(convert_objid(vector_search.similarity_search(search.cpu, k=5, pre_filter = {"category": "cpu", "buildable": True})))
+    if search.RAM: docs.append(convert_objid(vector_search.similarity_search("RAM " + search.RAM + "GB", k=5, pre_filter = {"category": "ram", "ram": search.RAM_type, "buildable": True})))
+    if search.SSD_size: docs.append(convert_objid(vector_search.similarity_search("SSD " + search.SSD_size, k=5, pre_filter = {"category": "disk", "sub_category": "ssd", "buildable": True})))
+    if search.HDD_size: docs.append(convert_objid(vector_search.similarity_search("HDD " + search.HDD_size, k=5, pre_filter = {"category": "disk", "sub_category": "hdd", "buildable": True})))
+    if search.PSU: docs.append(convert_objid(vector_search.similarity_search("Nguồn " + search.PSU + "W", k=5, pre_filter = {"category": "psu", "buildable": True})))
     if search.Case:
-      docs.append(convert_objid(vector_search.similarity_search("Mainboard " + size(search.Case), k=5, pre_filter = {"category": "main", "ram": search.RAM_type})))
-      docs.append(convert_objid(vector_search.similarity_search("Vỏ case máy tính " + size(search.Case), k=5, pre_filter = {"category": "case"})))
+      docs.append(convert_objid(vector_search.similarity_search("Mainboard " + size(search.Case), k=5, pre_filter = {"category": "main", "ram": search.RAM_type, "buildable": True, "socket": socket(search.CPU_socket), "size": size(search.Case)})))
+      docs.append(convert_objid(vector_search.similarity_search("Vỏ case máy tính " + size(search.Case), k=5, pre_filter = {"category": "case", "buildable": True, "size": size(search.Case)})))
     if search.Cooler: docs.append(convert_objid(vector_search.similarity_search("Tản nhiệt " + cooler(search.Cooler) , k=5, pre_filter = {"category": "cooler", "sub_category": cooler(search.Cooler)})))
     return docs
 
