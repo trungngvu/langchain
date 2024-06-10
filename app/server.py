@@ -24,7 +24,6 @@ from typing import Optional
 
 from langchain_core.pydantic_v1 import BaseModel, Field
 
-
 class Search(BaseModel):
     """Search over a database of computers' parts"""
     gpu: Optional[str] = Field(None, description="Name of your recommended Graphics card")
@@ -40,7 +39,10 @@ class Search(BaseModel):
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
-from langchain_groq import ChatGroq
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.output_parsers import PydanticOutputParser
+from langchain_core.prompts import PromptTemplate
+import json
 
 system = """You are an expert at converting user questions into database queries and an expert PC builder. \
 You have access to a database of computers' parts including GPU, CPU, hard disks, PSU, Motherboard, RAM. \
@@ -51,14 +53,16 @@ If the user have specify requirement for a specific application, try to use Reco
 All your response should be compatible with all the others. \
 If the user given a budget in Vietnam Dong, you can convert it to US Dollar by dividing it with 24000. \
 Given a question, return a list of database queries optimized to retrieve the most relevant results."""
-prompt = ChatPromptTemplate.from_messages(
-    [
-        ("system", system),
-        ("human", "{question}"),
-    ]
+llm = ChatGoogleGenerativeAI(temperature=0, google_api_key='AIzaSyAYtOXU6B6ubwRjk0-f8Lq_yvM-abbdm5U', model="gemini-1.5-flash")
+# Set up a parser + inject instructions into the prompt template.
+parser = PydanticOutputParser(pydantic_object=Search)
+
+prompt = PromptTemplate(
+    template= system + "\n{format_instructions}\n{query}\n",
+    input_variables=["query"],
+    partial_variables={"format_instructions": parser.get_format_instructions()},
 )
-llm = ChatGroq(temperature=0, groq_api_key='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', model_name="llama3-70b-8192")
-structured_llm = llm.with_structured_output(Search)   
+ 
 
 from langchain_community.vectorstores import MongoDBAtlasVectorSearch
 from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
@@ -96,7 +100,6 @@ def socket(s):
       s = s.replace("LGA ", "")
     return s
 
-import json
 def convert_objid(docs):
     res = []
     for doc in docs:
@@ -147,10 +150,39 @@ final_prompt = ChatPromptTemplate.from_template(template)
 
 # user_query = "Build cấu hình sản xuất video Youtube"
 
+def parseJson(s):
+    if s.content.find("\`\`\`\n\`\`\`") != -1:
+        s.content = s.content.replace("\`\`\`\n\`\`\`", "\`\`\`")
+    return s
+
+def similarity_retriever(input): 
+    input_str = input.messages[0].content.replace("'", '"')
+    # Parse the JSON string
+    data = json.loads(input_str)
+
+    # Extract the value associated with the key 'query'
+    result = data['query']
+    docs = convert_objid(vector_search.similarity_search(result, k=10, pre_filter = {"buildable": True}))
+    res = ""
+    for doc in docs:
+      res += f"{doc.get('metadata').get('_id')} "
+    return res
+     
+
+
+similarity_template ="""{question}"""
+similarity_prompt = ChatPromptTemplate.from_template(similarity_template)
+
 add_routes(
     app,
-    {"question": RunnablePassthrough(), "context": prompt | structured_llm | retriever | format_docs} | final_prompt | llm,
+    {"question": RunnablePassthrough(), "context": prompt | llm | parseJson | parser | retriever | format_docs}  | final_prompt | llm,
     path="/tronicsify",
+)
+
+add_routes(
+   app,
+    {"question": RunnablePassthrough(), "context": prompt} | similarity_prompt | similarity_retriever,
+   path="/similar-products"
 )
 
 
