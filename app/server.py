@@ -97,7 +97,8 @@ def cooler(s):
 
 def socket(s):
     if "LGA" in s:
-      s = s.replace("LGA ", "")
+      s = s.replace("LGA", "")
+    s.strip()
     return s
 
 def convert_objid(docs):
